@@ -1,0 +1,323 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//////////////////////
+// ENUMS
+//////////////////////
+
+enum Role {
+  admin
+  customer
+  delivery_person
+}
+
+enum Gender {
+  male
+  female
+  unisex
+}
+
+enum OrderStatus {
+  pending
+  paid
+  shipped
+  delivered
+  cancelled
+}
+
+enum FragranceFamily {
+  floral
+  woody
+  oriental
+  fresh
+  citrus
+  aquatic
+}
+
+enum DeliveryMessageSender {
+  customer
+  delivery
+  system
+}
+
+//////////////////////
+// USERS
+//////////////////////
+
+model User {
+  id            String   @id @default(uuid())
+  full_name     String   @db.VarChar(255)
+  email         String   @unique @db.VarChar(255)
+  password_hash String   @db.VarChar(255)
+  is_email_verified                Boolean   @default(false)
+  email_verification_code_hash     String?
+  email_verification_code_expires_at DateTime?
+  email_verification_sent_at       DateTime?
+  phone         String?  @db.VarChar(20)
+  role          Role     @default(customer)
+  points        Int      @default(0)
+  avatar_url    String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  addresses       Address[]
+  orders          Order[]
+  delivery_orders Order[]          @relation("DeliveryPersonOrders")
+  wishlist        Wishlist?
+  cart            Cart?
+  reviews         Review[]
+  payments        PaymentMethod[]
+}
+
+//////////////////////
+// ADDRESSES
+//////////////////////
+
+model Address {
+  id         String   @id @default(uuid())
+  user_id    String
+  label      String   @db.VarChar(100)
+  street     String   @db.VarChar(255)
+  city       String   @db.VarChar(100)
+  state      String   @db.VarChar(100)
+  zip_code   String   @db.VarChar(20)
+  country    String   @db.VarChar(100)
+  is_default Boolean  @default(false)
+  latitude   Float?
+  longitude  Float?
+  created_at DateTime @default(now())
+
+  user   User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  orders Order[]
+}
+
+//////////////////////
+// BRANDS
+//////////////////////
+
+model Brand {
+  id         String   @id @default(uuid())
+  name       String   @unique @db.VarChar(255)
+  logo_url   String?
+  created_at DateTime @default(now())
+
+  products Product[]
+}
+
+//////////////////////
+// PRODUCTS
+//////////////////////
+
+model Product {
+  id               String          @id @default(uuid())
+  brand_id         String
+  name             String          @db.VarChar(255)
+  description      String?         @db.Text
+  story            String?         @db.Text
+  image_url        String?
+  gender           Gender
+  fragrance_family FragranceFamily
+  top_notes        String?         @db.Text
+  middle_notes     String?         @db.Text
+  base_notes       String?         @db.Text
+  is_featured      Boolean         @default(false)
+  is_new_arrival   Boolean         @default(false)
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+
+  brand          Brand          @relation(fields: [brand_id], references: [id])
+  sizes          ProductSize[]
+  order_items    OrderItem[]
+  wishlist_items WishlistItem[]
+  cart_items     CartItem[]
+  reviews        Review[]
+  banners        Banner[]
+
+  @@index([brand_id])
+  @@index([fragrance_family])
+}
+
+//////////////////////
+// PRODUCT SIZES 🔥
+//////////////////////
+
+model ProductSize {
+  id         String  @id @default(uuid())
+  product_id String
+  size       String  @db.VarChar(20)
+  price      Decimal @db.Decimal(10, 2)
+  stock      Int     @default(0)
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([product_id, size])
+}
+
+//////////////////////
+// ORDERS
+//////////////////////
+
+model Order {
+  id                          String      @id @default(uuid())
+  user_id                     String
+  address_id                  String
+  delivery_person_id          String?
+  status                      OrderStatus @default(pending)
+  total_price                 Decimal     @db.Decimal(10, 2)
+
+  payment_method              String?
+  delivery_method             String?
+  delivery_latitude           Float?
+  delivery_longitude          Float?
+  delivery_location_updated_at DateTime?
+  assigned_at                 DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user              User                @relation(fields: [user_id], references: [id])
+  address           Address             @relation(fields: [address_id], references: [id])
+  delivery_person   User?               @relation("DeliveryPersonOrders", fields: [delivery_person_id], references: [id])
+  order_items       OrderItem[]
+  delivery_messages DeliveryMessage[]
+
+  @@index([user_id])
+  @@index([delivery_person_id])
+  @@index([status])
+}
+
+model OrderItem {
+  id         String  @id @default(uuid())
+  order_id   String
+  product_id String
+  quantity   Int
+  price      Decimal @db.Decimal(10, 2)
+  size       String  @db.VarChar(20)
+
+  order   Order   @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id])
+}
+
+//////////////////////
+// CART
+//////////////////////
+
+model Cart {
+  id         String   @id @default(uuid())
+  user_id    String   @unique
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  cart_items CartItem[]
+}
+
+model CartItem {
+  id         String @id @default(uuid())
+  cart_id    String
+  product_id String
+  quantity   Int    @default(1)
+  size       String @db.VarChar(20)
+
+  cart    Cart    @relation(fields: [cart_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id])
+
+  @@unique([cart_id, product_id, size])
+}
+
+//////////////////////
+// WISHLIST
+//////////////////////
+
+model Wishlist {
+  id         String   @id @default(uuid())
+  user_id    String   @unique
+  created_at DateTime @default(now())
+
+  user           User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  wishlist_items WishlistItem[]
+}
+
+model WishlistItem {
+  id          String @id @default(uuid())
+  wishlist_id String
+  product_id  String
+
+  wishlist Wishlist @relation(fields: [wishlist_id], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [product_id], references: [id])
+
+  @@unique([wishlist_id, product_id])
+}
+
+//////////////////////
+// REVIEWS
+//////////////////////
+
+model Review {
+  id         String   @id @default(uuid())
+  user_id    String
+  product_id String
+  rating     Int
+  comment    String?  @db.Text
+  created_at DateTime @default(now())
+
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, product_id])
+}
+
+//////////////////////
+// DELIVERY MESSAGES
+//////////////////////
+
+model DeliveryMessage {
+  id        String                    @id @default(uuid())
+  order_id  String
+  sender    DeliveryMessageSender
+  message   String                    @db.Text
+  read_at   DateTime?
+  created_at DateTime                 @default(now())
+
+  order   Order   @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([order_id])
+  @@index([order_id, read_at])
+}
+
+//////////////////////
+// PAYMENT METHODS
+//////////////////////
+
+model PaymentMethod {
+  id       String  @id @default(uuid())
+  user_id  String
+  type     String
+  provider String?
+  last4    String?
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+//////////////////////
+// BANNERS
+//////////////////////
+
+model Banner {
+  id         String  @id @default(uuid())
+  image_url  String
+  title      String?
+  product_id String?
+
+  product Product? @relation(fields: [product_id], references: [id])
+}
