@@ -1,6 +1,7 @@
-import { OrderStatus } from "@prisma/client";
 import { Request, Response } from "express";
 import { admin_services } from "../services/admin.service";
+
+type OrderStatus = "pending" | "paid" | "shipped" | "delivered" | "cancelled";
 
 const adminService = new admin_services();
 
