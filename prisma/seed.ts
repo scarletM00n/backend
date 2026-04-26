@@ -1,49 +1,14 @@
 import bcrypt from "bcryptjs";
 import fs from "fs/promises";
 import path from "path";
+import {
+  DeliveryMessageSender,
+  FragranceFamily,
+  Gender,
+  OrderStatus,
+  Role,
+} from "@prisma/client";
 import { prisma } from "../model/prisma";
-
-const DeliveryMessageSender = {
-  customer: "customer",
-  delivery: "delivery",
-  system: "system",
-} as const;
-type DeliveryMessageSender =
-  (typeof DeliveryMessageSender)[keyof typeof DeliveryMessageSender];
-
-const FragranceFamily = {
-  floral: "floral",
-  woody: "woody",
-  oriental: "oriental",
-  fresh: "fresh",
-  citrus: "citrus",
-  aquatic: "aquatic",
-} as const;
-type FragranceFamily =
-  (typeof FragranceFamily)[keyof typeof FragranceFamily];
-
-const Gender = {
-  male: "male",
-  female: "female",
-  unisex: "unisex",
-} as const;
-type Gender = (typeof Gender)[keyof typeof Gender];
-
-const OrderStatus = {
-  pending: "pending",
-  paid: "paid",
-  shipped: "shipped",
-  delivered: "delivered",
-  cancelled: "cancelled",
-} as const;
-type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
-
-const Role = {
-  admin: "admin",
-  customer: "customer",
-  delivery_person: "delivery_person",
-} as const;
-type Role = (typeof Role)[keyof typeof Role];
 
 const uploadRoot = path.resolve(__dirname, "..", "uploads");
 const seedImageCache = new Map<string, Promise<string>>();

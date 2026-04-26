@@ -1,6 +1,5 @@
+import type { OrderStatus } from "@prisma/client";
 import { prisma } from "../model/prisma";
-
-type OrderStatus = "pending" | "paid" | "shipped" | "delivered" | "cancelled";
 
 type Period = "week" | "month" | "year";
 
