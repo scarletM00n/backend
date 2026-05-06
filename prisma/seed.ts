@@ -124,27 +124,30 @@ async function ensureDatabaseReachable(): Promise<void> {
   }
 }
 
-async function clearDatabase(): Promise<void> {
-  await prisma.deliveryMessage.deleteMany();
-  await prisma.review.deleteMany();
-  await prisma.wishlistItem.deleteMany();
-  await prisma.cartItem.deleteMany();
-  await prisma.orderItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.paymentMethod.deleteMany();
-  await prisma.address.deleteMany();
-  await prisma.cart.deleteMany();
-  await prisma.wishlist.deleteMany();
-  await prisma.productSize.deleteMany();
-  await prisma.banner.deleteMany();
-  await prisma.product.deleteMany();
-  await prisma.brand.deleteMany();
-  await prisma.user.deleteMany();
+async function isDatabaseEmpty(): Promise<boolean> {
+  const [usersCount, brandsCount, productsCount, ordersCount] = await Promise.all([
+    prisma.user.count(),
+    prisma.brand.count(),
+    prisma.product.count(),
+    prisma.order.count(),
+  ]);
+
+  return (
+    usersCount === 0
+    && brandsCount === 0
+    && productsCount === 0
+    && ordersCount === 0
+  );
 }
 
 async function main(): Promise<void> {
   await ensureDatabaseReachable();
-  await clearDatabase();
+
+  const emptyDatabase = await isDatabaseEmpty();
+  if (!emptyDatabase) {
+    console.log("Seed skipped: database already contains data.");
+    return;
+  }
 
   const adminPassword = await bcrypt.hash("Admin@12345", 10);
   const customerPassword = await bcrypt.hash("Customer@12345", 10);
