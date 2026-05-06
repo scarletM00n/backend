@@ -43,7 +43,7 @@ export const deleteLocalUploadIfExists = async (storedPath?: string | null) => {
     }
 
     const relativePath = storedPath.replace(/^\/+/, "");
-    const absolutePath = path.join(__dirname, "..", relativePath);
+    const absolutePath = path.resolve(process.cwd(), relativePath);
 
     try {
         await fs.promises.unlink(absolutePath);

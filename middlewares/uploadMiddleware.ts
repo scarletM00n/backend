@@ -4,7 +4,7 @@ import path from "path";
 
 const maxFileSize = Number(process.env.MAX_FILE_SIZE || 5 * 1024 * 1024);
 const allowedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const uploadRoot = path.join(__dirname, "..", "uploads");
+const uploadRoot = path.resolve(process.cwd(), "uploads");
 
 const ensureDirectory = (dirPath: string) => {
     if (!fs.existsSync(dirPath)) {

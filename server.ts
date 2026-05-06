@@ -22,15 +22,14 @@ dotenv.config({ override: true });
 
 const app = express();
 const server = http.createServer(app);
-const resolvedPort = Number(process.env.PORT || 4001);
-const PORT = resolvedPort === 4000 ? 4001 : resolvedPort;
-const MAX_PORT_ATTEMPTS = 10;
+const PORT = Number(process.env.PORT || 4001);
+const uploadRoot = path.resolve(process.cwd(), 'uploads');
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({extended :true})) ;
 app.use(morgan("dev"));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadRoot));
 
 // apis
 
@@ -48,23 +47,8 @@ app.use('/api/delivery', deliveryRouter);
 app.use('/api/chatbot', chatbotRouter);
 
 initSocket(server);
-
-let activePort = PORT;
-let attemptsLeft = MAX_PORT_ATTEMPTS;
-
-server.on('error', (error: NodeJS.ErrnoException) => {
-      if (error.code === 'EADDRINUSE' && attemptsLeft > 1) {
-            attemptsLeft -= 1;
-            activePort += 1;
-            server.listen(activePort);
-            return;
-      }
-
-      throw error;
-});
-
-server.listen(activePort, () => {
-      console.log(`server running at => http://localhost:${activePort} ;`);
+server.listen(PORT, () => {
+      console.log(`server running at => http://localhost:${PORT} ;`);
 });
 
 
