@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { randomInt } from "crypto";
 import { deleteLocalUploadIfExists } from "../utils/uploadFile";
+import { sendOtpEmail } from "../utils/emailService";
 
 export class auth_services {
     constructor(){}
@@ -29,8 +30,22 @@ export class auth_services {
             },
         });
 
-        if (process.env.NODE_ENV !== "production") {
-            console.info(`[DEV-EMAIL] verification code for ${email}: ${verificationCode}`);
+        try {
+            // Send OTP via Resend email service
+            await sendOtpEmail({
+                email,
+                otp: verificationCode,
+                userName: "User",
+            });
+        } catch (emailError) {
+            console.error(`[AUTH] Failed to send verification email to ${email}:`, emailError);
+            // In development, log the code as fallback
+            if (process.env.NODE_ENV !== "production") {
+                console.info(`[DEV-EMAIL] verification code for ${email}: ${verificationCode}`);
+            } else {
+                // In production, re-throw the error so the registration fails gracefully
+                throw new Error("Failed to send verification email. Please try again.");
+            }
         }
     }
 
