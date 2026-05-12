@@ -33,11 +33,12 @@ export async function sendOtpEmail({ email, otp, userName = "User" }: SendOtpEma
         const smtpUser = getRequiredEnv("SMTP_USER");
         const smtpPass = getRequiredEnv("SMTP_PASS");
         const senderEmail = getRequiredEnv("SMTP_FROM");
+        const smtpSecure = getSmtpSecureFlag();
 
         const transporter = nodemailer.createTransport({
             host: smtpHost,
             port: smtpPort,
-            secure: getSmtpSecureFlag(),
+            secure: smtpSecure,
             auth: {
                 user: smtpUser,
                 pass: smtpPass,
@@ -54,7 +55,38 @@ export async function sendOtpEmail({ email, otp, userName = "User" }: SendOtpEma
         console.log(`[EMAIL] OTP sent successfully to ${email}`);
         return response;
     } catch (error) {
-        console.error(`[EMAIL ERROR] Failed to send OTP email to ${email}:`, error);
+        const err = error as any;
+        const errorCode = err?.code || "UNKNOWN";
+        const errorMessage = err?.message || String(error);
+
+        console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        console.error("[EMAIL ERROR] Failed to send OTP email");
+        console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        console.error(`Recipient Email: ${email}`);
+        console.error(`Error Code: ${errorCode}`);
+        console.error(`Error Message: ${errorMessage}`);
+        console.error(`SMTP Config: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT} (secure=${process.env.SMTP_SECURE})`);
+        console.error(`SMTP User: ${process.env.SMTP_USER}`);
+
+        // Provide helpful debugging hints based on error code
+        if (errorCode === "ETIMEDOUT" || errorCode === "ECONNREFUSED") {
+            console.error("\n💡 Troubleshooting SMTP Connection:");
+            console.error("  • Check SMTP_HOST and SMTP_PORT are correct");
+            console.error("  • Verify SMTP_SECURE matches your SMTP provider (465 = true, 587 = false)");
+            console.error("  • Ensure firewall/network allows outbound connections to SMTP server");
+            console.error("  • For Gmail: verify app password is correct (not your main password)");
+        } else if (errorCode === "EAUTH") {
+            console.error("\n💡 Authentication Failed:");
+            console.error("  • Check SMTP_USER and SMTP_PASS are correct");
+            console.error("  • For Gmail: use app password, not your account password");
+            console.error("  • Verify credentials have not expired");
+        } else if (errorCode === "ENOTFOUND") {
+            console.error("\n💡 SMTP Server Not Found:");
+            console.error("  • Verify SMTP_HOST is spelled correctly");
+            console.error("  • Check DNS resolution is working");
+        }
+        console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
         throw error;
     }
 }
