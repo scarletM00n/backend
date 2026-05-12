@@ -1,6 +1,13 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Nodemailer transporter with Gmail
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.GMAIL_EMAIL,
+        pass: process.env.GMAIL_APP_PASSWORD,
+    },
+});
 
 interface SendOtpEmailParams {
     email: string;
@@ -11,8 +18,12 @@ interface SendOtpEmailParams {
 export async function sendOtpEmail({ email, otp, userName = "User" }: SendOtpEmailParams) {
     try {
         // Validate required environment variables
-        if (!process.env.RESEND_API_KEY) {
-            throw new Error("RESEND_API_KEY is not configured");
+        if (!process.env.GMAIL_EMAIL) {
+            throw new Error("GMAIL_EMAIL is not configured");
+        }
+
+        if (!process.env.GMAIL_APP_PASSWORD) {
+            throw new Error("GMAIL_APP_PASSWORD is not configured");
         }
 
         if (!process.env.SENDER_EMAIL) {
@@ -21,16 +32,12 @@ export async function sendOtpEmail({ email, otp, userName = "User" }: SendOtpEma
 
         const senderEmail = process.env.SENDER_EMAIL;
 
-        const response = await resend.emails.send({
+        const response = await transporter.sendMail({
             from: senderEmail,
             to: email,
             subject: "Email Verification - Scentra",
             html: generateOtpEmailTemplate(otp, userName),
         });
-
-        if (response.error) {
-            throw new Error(`Failed to send email: ${response.error.message}`);
-        }
 
         console.log(`[EMAIL] OTP sent successfully to ${email}`);
         return response;
