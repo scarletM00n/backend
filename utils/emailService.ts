@@ -1,36 +1,48 @@
 import nodemailer from "nodemailer";
 
-// Initialize Nodemailer transporter with Gmail
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.GMAIL_EMAIL,
-        pass: process.env.GMAIL_APP_PASSWORD,
-    },
-});
-
 interface SendOtpEmailParams {
     email: string;
     otp: string;
     userName?: string;
 }
 
+function getRequiredEnv(name: string): string {
+    const value = process.env[name];
+
+    if (!value) {
+        throw new Error(`${name} is not configured`);
+    }
+
+    return value;
+}
+
+function getSmtpSecureFlag(): boolean {
+    const value = process.env.SMTP_SECURE;
+
+    if (!value) {
+        return true;
+    }
+
+    return value.toLowerCase() === "true";
+}
+
 export async function sendOtpEmail({ email, otp, userName = "User" }: SendOtpEmailParams) {
     try {
-        // Validate required environment variables
-        if (!process.env.GMAIL_EMAIL) {
-            throw new Error("GMAIL_EMAIL is not configured");
-        }
+        const smtpHost = getRequiredEnv("SMTP_HOST");
+        const smtpPort = Number(getRequiredEnv("SMTP_PORT"));
+        const smtpUser = getRequiredEnv("SMTP_USER");
+        const smtpPass = getRequiredEnv("SMTP_PASS");
+        const senderEmail = getRequiredEnv("SMTP_FROM");
 
-        if (!process.env.GMAIL_APP_PASSWORD) {
-            throw new Error("GMAIL_APP_PASSWORD is not configured");
-        }
-
-        if (!process.env.SENDER_EMAIL) {
-            throw new Error("SENDER_EMAIL is not configured");
-        }
-
-        const senderEmail = process.env.SENDER_EMAIL;
+        const transporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: getSmtpSecureFlag(),
+            auth: {
+                user: smtpUser,
+                pass: smtpPass,
+            },
+        });
 
         const response = await transporter.sendMail({
             from: senderEmail,
